@@ -405,7 +405,9 @@ export default function AudioRecorderPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
               <p className="text-xs font-semibold text-amber-700">Word Mismatches</p>
               {evalResult.gate5.mismatches.filter((m: any) => m.expected).map((m: any, i: number) => (
-                <p key={i} className="text-xs text-amber-700 font-mono">• [{m.type}] position {m.position}: expected "{m.expected}" → heard "{m.heard}"</p>
+                <p key={i} className="text-xs text-amber-700 font-mono">
+  {`• [${m.type}] position ${m.position}: expected "${m.expected}" → heard "${m.heard}"`}
+</p>
               ))}
             </div>
           )}

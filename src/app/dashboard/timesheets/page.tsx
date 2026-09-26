@@ -72,7 +72,7 @@ export default function TimesheetsPage() {
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h2 className="font-semibold text-gray-900">Submit This Week's Hours</h2>
+          <h2 className="font-semibold text-gray-900">Submit This Week&apos;s Hours</h2>
           <p className="text-sm text-gray-500">Current period: Sunday to Saturday. Submit once per period.</p>
 
           {error && (

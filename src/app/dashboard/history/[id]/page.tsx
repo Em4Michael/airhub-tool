@@ -96,7 +96,7 @@ export default function RatingDetailPage() {
             </a>
           </div>
           {rating.query && (
-            <p className="text-xs text-gray-400 mt-0.5">Query: "{rating.query}"</p>
+            <p className="text-xs text-gray-400 mt-0.5">Query: &ldquo;{rating.query}&rdquo;</p>
           )}
         </div>
       </div>
