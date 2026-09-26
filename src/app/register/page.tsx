@@ -3,12 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { authApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,23 +67,38 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {[
-              { key: "name", label: "Full Name", type: "text", placeholder: "Your full name" },
-              { key: "email", label: "Email", type: "email", placeholder: "your@email.com" },
-              { key: "password", label: "Password", type: "password", placeholder: "Min. 8 characters" },
-            ].map(({ key, label, type, placeholder }) => (
-              <div key={key}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-                <input
-                  type={type}
-                  required
-                  value={form[key as keyof typeof form]}
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder={placeholder}
-                />
-              </div>
-            ))}
+{[
+  { key: "name", label: "Full Name", type: "text", placeholder: "Your full name" },
+  { key: "email", label: "Email", type: "email", placeholder: "your@email.com" },
+  { key: "password", label: "Password", type: "password", placeholder: "Min. 8 characters" },
+].map(({ key, label, type, placeholder }) => {
+  const isPassword = key === "password";
+  return (
+    <div key={key}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="relative">
+        <input
+          type={isPassword ? (showPassword ? "text" : "password") : type}
+          required
+          value={form[key as keyof typeof form]}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+          className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${isPassword ? "pr-10" : ""}`}
+          placeholder={placeholder}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+})}
 
             <button
               type="submit"
