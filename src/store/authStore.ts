@@ -8,6 +8,8 @@ interface User {
   isApproved: boolean;
   hourlyRate?: number;
   totalEarnings?: number;
+  phone?: string;
+  bankAccount?: string;
 }
 
 interface AuthState {
