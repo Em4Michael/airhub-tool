@@ -46,6 +46,8 @@ export const ratingsApi = {
     api.post("/ratings/sxs-summary", data),
     evaluateNeedsMetImage: (query: string, url: string, imageBase64: string, imageType: string) =>
     api.post("/ratings/evaluate/needs-met-image", { query, url, imageBase64, imageType }),
+    evaluateYoutubeImage: (query: string, url: string, imageBase64: string, imageType: string) =>
+  api.post('/ratings/evaluate/youtube-image', { query, url, imageBase64, imageType }),
   evaluateYoutube: (query: string, url: string) =>
     api.post("/ratings/evaluate/youtube", { query, url }),
   evaluateImage: (query: string, url: string) =>
@@ -90,7 +92,9 @@ export const adminApi = {
   updateUserProfile: (id: string, data: object) =>
     api.patch(`/admin/users/${id}/profile`, data),
   toggleActive: (id: string) => api.patch(`/admin/users/${id}/toggle-active`),
-  getAllRatings: (params?: object) => api.get("/admin/ratings", { params }),
+    getAllRatings: (params?: object) => api.get("/admin/ratings", { params }),
+  getUsage: (params?: object) => api.get("/admin/usage", { params }),
+  getUserUsage: (userId: string, params?: object) => api.get(`/admin/usage/${userId}`, { params }),
 };
 
 export default api;

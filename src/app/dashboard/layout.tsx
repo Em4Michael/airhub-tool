@@ -6,7 +6,7 @@ import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import {
   LayoutDashboard, Star, Clock, CreditCard, Trophy,
-  Users, Settings, LogOut, ChevronRight, Menu, X, Wrench
+  Users, Settings, LogOut, ChevronRight, Menu, X, Activity, Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ const raterNav = [
 const adminNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/admin/users", label: "Users", icon: Users },
+  { href: "/dashboard/admin/usage", label: "Usage Analytics", icon: Activity },
   { href: "/dashboard/admin/timesheets", label: "Timesheets", icon: Clock },
   { href: "/dashboard/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/dashboard/admin/ratings", label: "All Ratings", icon: Star },

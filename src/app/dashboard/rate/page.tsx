@@ -104,7 +104,7 @@ function RateTasksInner() {
               nmUrls.filter((u) => u.url.trim() || u.imageFile).map(async (u) => {
                 if (u.type === "image" && u.imageFile) {
                   const base64 = await toBase64(u.imageFile);
-                  const ytRes = await ratingsApi.evaluateNeedsMetImage(query, u.url, base64, u.imageFile.type);
+                  const ytRes = await ratingsApi.evaluateYoutubeImage(query, u.url, base64, u.imageFile.type);
                   return { ...ytRes.data.data, _side: u.side, _type: u.type, _url: u.url, _imagePreview: u.imagePreview };
                 }
                 // ALL YouTube URLs — both left and right — go through evaluateYoutube
@@ -865,6 +865,106 @@ function NeedsMétCard({ result, index }: { result: any; index: number }) {
             );
           })()}
 
+          {/* Content checklist, topics, reputation, degree ratings, malicious flag */}
+          {(raw.topics?.length > 0 || raw.creatorReputation || raw.isSatireOrHumor || raw.deceptiveDegree || raw.harmfulDegree || raw.isMalicious !== undefined) && (
+            <div className="mt-1.5 pt-1.5 border-t border-gray-100 space-y-1.5">
+              {raw.contentChecklist && (raw.contentChecklist.isPornMainContent || raw.contentChecklist.isForeignLanguage || raw.contentChecklist.didntLoad) && (
+                <div className="flex flex-wrap gap-1">
+                  {raw.contentChecklist.isPornMainContent && (
+                    <span className="bg-pink-100 text-pink-700 border border-pink-300 px-1.5 py-0.5 rounded text-xs font-semibold">Porn in Main Content</span>
+                  )}
+                  {raw.contentChecklist.isForeignLanguage && (
+                    <span className="bg-gray-100 text-gray-700 border border-gray-300 px-1.5 py-0.5 rounded text-xs font-semibold">Foreign Language</span>
+                  )}
+                  {raw.contentChecklist.didntLoad && (
+                    <span className="bg-gray-100 text-gray-700 border border-gray-300 px-1.5 py-0.5 rounded text-xs font-semibold">Didn't Load</span>
+                  )}
+                </div>
+              )}
+
+              {raw.topics?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {raw.topics.map((t: string, i: number) => (
+                    <span key={i} className="bg-slate-100 text-slate-700 border border-slate-300 px-1.5 py-0.5 rounded-full text-xs">{t}</span>
+                  ))}
+                </div>
+              )}
+
+              {raw.creatorReputation && (
+                <p><span className="font-medium">Creator Reputation:</span> {raw.creatorReputation}</p>
+              )}
+
+              {raw.isSatireOrHumor && (
+                <p><span className="font-medium">Satire/Humor:</span> {raw.isSatireOrHumor}</p>
+              )}
+
+              {raw.publicInterestOutweighsRisk && (
+                <p><span className="font-medium">Public Interest Override:</span> {raw.publicInterestOutweighsRisk}</p>
+              )}
+
+              {raw.deceptiveDegree && (
+                <div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    raw.deceptiveDegree === 'Not at all' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                    raw.deceptiveDegree === 'Low' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                    raw.deceptiveDegree === 'Medium' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                    'bg-red-100 text-red-800 border-red-300'
+                  }`}>
+                    Deceptive: {raw.deceptiveDegree}
+                  </span>
+                  {raw.deceptiveReasons?.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {raw.deceptiveReasons.map((r: string, i: number) => (
+                        <p key={i} className="text-orange-600 text-xs">• {r}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {raw.harmfulDegree && (
+                <div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    raw.harmfulDegree === 'Not at all' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                    raw.harmfulDegree === 'Low' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                    raw.harmfulDegree === 'Medium' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                    'bg-red-100 text-red-800 border-red-300'
+                  }`}>
+                    Harmful: {raw.harmfulDegree}
+                  </span>
+                  {raw.harmfulReasons?.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {raw.harmfulReasons.map((r: string, i: number) => (
+                        <p key={i} className="text-red-600 text-xs">• {r}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {raw.insensitiveIntolerantDegree && (
+                <div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    raw.insensitiveIntolerantDegree === 'Not at all' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                    raw.insensitiveIntolerantDegree === 'Low' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                    raw.insensitiveIntolerantDegree === 'Medium' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                    'bg-red-100 text-red-800 border-red-300'
+                  }`}>
+                    Insensitive/Intolerant: {raw.insensitiveIntolerantDegree}
+                  </span>
+                </div>
+              )}
+              
+              {raw.isMalicious && (
+                <div>
+                  <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">⚠ Malicious Intent</span>
+                  {raw.maliciousReason && <p className="text-red-600 text-xs mt-1">{raw.maliciousReason}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          
           {/* Image-specific fields */}
           {raw.imageSatisfaction && (
             <div className="mt-1.5 pt-1.5 border-t border-gray-100 space-y-1">
