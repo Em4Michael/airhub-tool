@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import {
   Users, Clock, Zap, TrendingUp, Award, ChevronRight,
-  ArrowLeft, Activity, Target, Filter,
+  ArrowLeft, Activity, Target, Filter, Calendar,
 } from "lucide-react";
 
 const TASK_LABELS: Record<string, string> = {
@@ -33,15 +33,10 @@ const USER_PALETTE = [
   "#8b5cf6","#06b6d4","#84cc16","#f97316","#ec4899",
 ];
 
-function fmtTime(sec: number) {
-  if (!sec) return "0m";
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-function fmtHrs(hrs: number) { return `${hrs.toFixed(1)}h`; }
 function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function fmtWeek(d: string) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -83,6 +78,13 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
+const STATUS_STYLE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  approved: "bg-green-100 text-green-700",
+  paid: "bg-blue-100 text-blue-700",
+  rejected: "bg-red-100 text-red-700",
+};
+
 export default function AdminUsagePage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ export default function AdminUsagePage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userDetail, setUserDetail] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [sortBy, setSortBy] = useState<"totalRatings"|"totalTimeHrs"|"ratingsPerDay">("totalRatings");
+  const [sortBy, setSortBy] = useState<"totalRatings"|"totalHours"|"ratingsPerDay">("totalRatings");
   const [compareUsers, setCompareUsers] = useState<string[]>([]);
 
   async function load() {
@@ -129,15 +131,17 @@ export default function AdminUsagePage() {
     const users = data.users.filter((u: any) => compareUsers.includes(u.userId.toString()));
     return [
       { metric: "Ratings", ...Object.fromEntries(users.map((u: any) => [u.name.split(" ")[0], u.totalRatings])) },
-      { metric: "Hours", ...Object.fromEntries(users.map((u: any) => [u.name.split(" ")[0], u.totalTimeHrs])) },
+      { metric: "Hours", ...Object.fromEntries(users.map((u: any) => [u.name.split(" ")[0], u.totalHours ?? 0])) },
       { metric: "Rate/day", ...Object.fromEntries(users.map((u: any) => [u.name.split(" ")[0], u.ratingsPerDay])) },
-      { metric: "Avg time(m)", ...Object.fromEntries(users.map((u: any) => [u.name.split(" ")[0], Math.round(u.avgTimeSec / 60)])) },
     ];
   }, [data, compareUsers]);
 
   const sortedUsers = useMemo(() => {
     if (!data?.users) return [];
-    return [...data.users].sort((a: any, b: any) => b[sortBy] - a[sortBy]);
+    return [...data.users].sort((a: any, b: any) => {
+      if (sortBy === "totalHours") return (b.totalHours ?? -1) - (a.totalHours ?? -1);
+      return b[sortBy] - a[sortBy];
+    });
   }, [data, sortBy]);
 
   const maxRatings = sortedUsers[0]?.totalRatings || 1;
@@ -158,7 +162,6 @@ export default function AdminUsagePage() {
     const dailyChart = userDetail.daily.map((d: any) => ({
       date: fmtDate(d._id),
       ratings: d.count,
-      minutes: Math.round(d.timeSec / 60),
     }));
 
     const hourlyChart = Array.from({ length: 24 }, (_, h) => {
@@ -169,14 +172,12 @@ export default function AdminUsagePage() {
     const typeChart = userDetail.typeBreakdown.map((t: any) => ({
       name: TASK_LABELS[t._id] || t._id,
       count: t.count,
-      minutes: Math.round(t.totalTime / 60),
       color: TASK_COLORS[t._id] || "#6b7280",
     }));
 
     return (
       <div className="max-w-5xl mx-auto space-y-6">
 
-        {/* Back header */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => { setSelectedUser(null); setUserDetail(null); }}
@@ -197,18 +198,82 @@ export default function AdminUsagePage() {
         ) : (
           <div className="space-y-6">
 
-            {/* Stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <StatCard label="Total Ratings" value={selectedUser.totalRatings} icon={Zap} color="bg-indigo-500" />
-              <StatCard label="Time Spent" value={fmtHrs(selectedUser.totalTimeHrs)} sub={fmtTime(selectedUser.totalTimeSec)} icon={Clock} color="bg-emerald-500" />
+              <StatCard
+                label="Hours Submitted"
+                value={userDetail.hasTimeData ? `${userDetail.totalHours}h` : "—"}
+                sub={userDetail.hasTimeData ? `across ${userDetail.timesheets?.length || 0} timesheet(s)` : "no timesheets submitted"}
+                icon={Clock}
+                color="bg-emerald-500"
+              />
               <StatCard label="Ratings / Day" value={selectedUser.ratingsPerDay} icon={TrendingUp} color="bg-amber-500" />
-              <StatCard label="Avg Time / Task" value={fmtTime(selectedUser.avgTimeSec)} icon={Target} color="bg-blue-500" />
             </div>
 
-            {/* Daily activity */}
+            {/* Weekly timesheet breakdown */}
+            {userDetail.timesheets?.length > 0 ? (
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-700">Weekly Timesheets</span>
+                  <span className="text-xs text-gray-400 ml-auto">Hours submitted by user</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {userDetail.timesheets.map((t: any, i: number) => (
+                    <div key={i} className="px-5 py-3 flex items-center gap-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">
+                          Week of {fmtWeek(t.periodStart)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {fmtWeek(t.periodStart)} – {fmtWeek(t.periodEnd)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-base font-bold text-gray-900">{t.hoursWorked}h</p>
+                        {t.grossAmount && <p className="text-xs text-gray-400">₦{t.grossAmount.toLocaleString()}</p>}
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[t.status] || "bg-gray-100 text-gray-600"}`}>
+                        {t.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Total row */}
+                <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-700">Total this period</span>
+                  <span className="text-base font-bold text-primary">{userDetail.totalHours}h</span>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                <Clock className="h-6 w-6 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No timesheets submitted in this period</p>
+                <p className="text-xs text-gray-400 mt-1">Hours appear here once the user submits a weekly timesheet</p>
+              </div>
+            )}
+
+            {/* Weekly hours chart */}
+            {userDetail.timesheets?.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <h2 className="text-sm font-semibold text-gray-700 mb-4">Hours by Week</h2>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={userDetail.timesheets.map((t: any) => ({ week: fmtWeek(t.periodStart), hours: t.hoursWorked }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Bar dataKey="hours" name="Hours" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Daily rating activity */}
             <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">Daily Activity</h2>
-              <ResponsiveContainer width="100%" height={220}>
+              <h2 className="text-sm font-semibold text-gray-700 mb-4">Daily Rating Activity</h2>
+              <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={dailyChart}>
                   <defs>
                     <linearGradient id="ratGrad" x1="0" y1="0" x2="0" y2="1">
@@ -225,11 +290,11 @@ export default function AdminUsagePage() {
               </ResponsiveContainer>
             </div>
 
-            {/* Hourly + Task breakdown */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Hourly pattern */}
               <div className="bg-white border border-gray-200 rounded-xl p-5">
                 <h2 className="text-sm font-semibold text-gray-700 mb-4">Activity by Hour of Day</h2>
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={hourlyChart}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#94a3b8" }} interval={3} />
@@ -240,6 +305,7 @@ export default function AdminUsagePage() {
                 </ResponsiveContainer>
               </div>
 
+              {/* Task breakdown */}
               <div className="bg-white border border-gray-200 rounded-xl p-5">
                 <h2 className="text-sm font-semibold text-gray-700 mb-4">Task Breakdown</h2>
                 <div className="space-y-2.5">
@@ -253,12 +319,9 @@ export default function AdminUsagePage() {
                         />
                       </div>
                       <span className="text-xs font-semibold text-gray-700 w-8 text-right">{t.count}</span>
-                      <span className="text-xs text-gray-400 w-12 text-right">{t.minutes}m</span>
                     </div>
                   ))}
-                  {typeChart.length === 0 && (
-                    <p className="text-xs text-gray-400 text-center py-4">No data</p>
-                  )}
+                  {typeChart.length === 0 && <p className="text-xs text-gray-400 text-center py-4">No data</p>}
                 </div>
               </div>
             </div>
@@ -279,7 +342,6 @@ export default function AdminUsagePage() {
                         {TASK_LABELS[r.taskType] || r.taskType}
                       </span>
                       <span className="text-xs text-gray-600 flex-1 truncate">{r.query || r.inputUrl}</span>
-                      <span className="text-xs text-gray-400 flex-shrink-0">{fmtTime(r.timeTaken)}</span>
                       <span className="text-xs text-gray-300 flex-shrink-0">{new Date(r.createdAt).toLocaleDateString()}</span>
                     </div>
                   ))}
@@ -289,7 +351,6 @@ export default function AdminUsagePage() {
 
           </div>
         )}
-
       </div>
     );
   }
@@ -298,12 +359,16 @@ export default function AdminUsagePage() {
     return <div className="text-sm text-gray-500 p-8 text-center">No data available.</div>;
   }
 
-  // Build charts
   const dailyTrendChart = data.dailyTrend.map((d: any) => ({
     date: fmtDate(d._id),
     ratings: d.totalRatings,
     users: d.uniqueUsers,
-    hours: parseFloat((d.totalTimeSec / 3600).toFixed(1)),
+  }));
+
+  const weeklyHoursChart = (data.weeklyHoursTrend || []).map((w: any) => ({
+    week: fmtWeek(w._id),
+    hours: w.totalHours,
+    users: w.usersCount,
   }));
 
   const pieData = data.globalTypeBreakdown.map((t: any) => ({
@@ -318,18 +383,18 @@ export default function AdminUsagePage() {
   });
 
   const compareUsersData = data.users.filter((u: any) => compareUsers.includes(u.userId.toString()));
-  const radarData = ["totalRatings", "totalTimeHrs", "ratingsPerDay"].map(key => {
-    const maxVal = Math.max(...compareUsersData.map((u: any) => u[key]), 1);
-    const metricLabel: Record<string, string> = { totalRatings: "Ratings", totalTimeHrs: "Hours", ratingsPerDay: "Rate/day" };
+  const radarData = ["totalRatings", "totalHours", "ratingsPerDay"].map(key => {
+    const metricLabel: Record<string, string> = { totalRatings: "Ratings", totalHours: "Hours", ratingsPerDay: "Rate/day" };
+    const vals = compareUsersData.map((u: any) => u[key] ?? 0);
+    const maxVal = Math.max(...vals, 1);
     return {
       metric: metricLabel[key],
       ...Object.fromEntries(
-        compareUsersData.map((u: any) => [u.name.split(" ")[0], parseFloat(((u[key] / maxVal) * 100).toFixed(1))])
+        compareUsersData.map((u: any) => [u.name.split(" ")[0], parseFloat((((u[key] ?? 0) / maxVal) * 100).toFixed(1))])
       ),
     };
   });
 
-  // ── Main Analytics View ───────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto space-y-6">
 
@@ -337,7 +402,9 @@ export default function AdminUsagePage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Usage Analytics</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Individual usage · time tracking · performance comparison</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Rating counts · weekly submitted hours · performance comparison
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-400" />
@@ -358,13 +425,37 @@ export default function AdminUsagePage() {
 
       {/* Totals */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Total Ratings" value={data.totals.totalRatings.toLocaleString()} sub={`last ${days} days`} icon={Zap} color="bg-indigo-500" />
-        <StatCard label="Total Time" value={fmtHrs(data.totals.totalTimeHrs)} sub="across all users" icon={Clock} color="bg-emerald-500" />
-        <StatCard label="Active Users" value={data.totals.activeUsers} sub="with completions" icon={Users} color="bg-amber-500" />
-        <StatCard label="Avg Ratings/User" value={data.totals.avgRatingsPerUser} sub="this period" icon={TrendingUp} color="bg-blue-500" />
+        <StatCard
+          label="Total Ratings"
+          value={data.totals.totalRatings.toLocaleString()}
+          sub={`last ${days} days`}
+          icon={Zap}
+          color="bg-indigo-500"
+        />
+        <StatCard
+          label="Total Hours"
+          value={data.totals.hasTimeData ? `${data.totals.totalHours}h` : "—"}
+          sub={data.totals.hasTimeData ? "from submitted timesheets" : "no timesheets submitted yet"}
+          icon={Clock}
+          color="bg-emerald-500"
+        />
+        <StatCard
+          label="Active Users"
+          value={data.totals.activeUsers}
+          sub="with completed ratings"
+          icon={Users}
+          color="bg-amber-500"
+        />
+        <StatCard
+          label="Avg Ratings/User"
+          value={data.totals.avgRatingsPerUser}
+          sub="this period"
+          icon={TrendingUp}
+          color="bg-blue-500"
+        />
       </div>
 
-      {/* Daily trend + Task pie */}
+      {/* Daily trend */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Daily Rating Trend</h2>
@@ -392,11 +483,9 @@ export default function AdminUsagePage() {
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                {pieData.map((entry: any, i: number) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
+                {pieData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
               </Pie>
-              <Tooltip formatter={(value: any, name: any) => [value, name]} />
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-1.5 mt-2">
@@ -411,10 +500,37 @@ export default function AdminUsagePage() {
         </div>
       </div>
 
+      {/* Weekly submitted hours */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-4 w-4 text-emerald-500" />
+          <h2 className="text-sm font-semibold text-gray-700">Weekly Submitted Hours (all users)</h2>
+          <span className="text-xs text-gray-400 ml-auto">From submitted timesheets only</span>
+        </div>
+        {weeklyHoursChart.length > 0 ? (
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={weeklyHoursChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="hours" name="Total Hours" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-32 flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <Clock className="h-6 w-6 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No timesheets submitted in this period</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Hourly heatmap */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Activity by Hour of Day (all users)</h2>
-        <ResponsiveContainer width="100%" height={140}>
+        <ResponsiveContainer width="100%" height={130}>
           <BarChart data={hourlyChart}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#94a3b8" }} interval={1} />
@@ -431,7 +547,7 @@ export default function AdminUsagePage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Compare selected users */}
+      {/* Compare */}
       {compareUsers.length >= 2 && (
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
@@ -439,9 +555,7 @@ export default function AdminUsagePage() {
               Comparing {compareUsers.length} users
               <span className="text-gray-400 font-normal ml-1">(normalised 0–100)</span>
             </h2>
-            <button onClick={() => setCompareUsers([])} className="text-xs text-gray-400 hover:text-red-500">
-              Clear
-            </button>
+            <button onClick={() => setCompareUsers([])} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <ResponsiveContainer width="100%" height={240}>
@@ -450,21 +564,13 @@ export default function AdminUsagePage() {
                 <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "#64748b" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "#94a3b8" }} />
                 {compareUsersData.map((u: any, i: number) => (
-                  <Radar
-                    key={u.userId}
-                    name={u.name.split(" ")[0]}
-                    dataKey={u.name.split(" ")[0]}
-                    stroke={USER_PALETTE[i]}
-                    fill={USER_PALETTE[i]}
-                    fillOpacity={0.12}
-                    strokeWidth={2}
-                  />
+                  <Radar key={u.userId} name={u.name.split(" ")[0]} dataKey={u.name.split(" ")[0]}
+                    stroke={USER_PALETTE[i]} fill={USER_PALETTE[i]} fillOpacity={0.12} strokeWidth={2} />
                 ))}
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Tooltip />
               </RadarChart>
             </ResponsiveContainer>
-
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={comparisonData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -495,7 +601,7 @@ export default function AdminUsagePage() {
             <span className="text-xs text-gray-400">Sort by:</span>
             {[
               { key: "totalRatings", label: "Ratings" },
-              { key: "totalTimeHrs", label: "Hours" },
+              { key: "totalHours", label: "Hours" },
               { key: "ratingsPerDay", label: "Rate/day" },
             ].map(opt => (
               <button
@@ -543,16 +649,22 @@ export default function AdminUsagePage() {
                       <UsageBar value={user.totalRatings} max={maxRatings} color={USER_PALETTE[i % USER_PALETTE.length]} />
                     </div>
                     <div>
-                      <p className="text-base font-bold text-gray-900">{fmtHrs(user.totalTimeHrs)}</p>
-                      <p className="text-xs text-gray-400">time spent</p>
+                      <p className="text-base font-bold text-gray-900">
+                        {user.hasTimeData ? `${user.totalHours}h` : "—"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {user.hasTimeData ? `${user.timesheetCount} week(s)` : "no timesheets"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-base font-bold text-gray-900">{user.ratingsPerDay}</p>
                       <p className="text-xs text-gray-400">per day</p>
                     </div>
                     <div>
-                      <p className="text-base font-bold text-gray-900">{fmtTime(user.avgTimeSec)}</p>
-                      <p className="text-xs text-gray-400">avg/task</p>
+                      <p className="text-base font-bold text-gray-900">
+                        {user.estimatedEarnings != null ? `₦${user.estimatedEarnings.toLocaleString()}` : "—"}
+                      </p>
+                      <p className="text-xs text-gray-400">est. earnings</p>
                     </div>
                   </div>
 
@@ -595,14 +707,15 @@ export default function AdminUsagePage() {
                   </div>
                 </div>
 
+                {/* Mobile */}
                 <div className="sm:hidden mt-3 grid grid-cols-3 gap-3 text-center">
                   <div>
                     <p className="text-sm font-bold text-gray-900">{user.totalRatings}</p>
                     <p className="text-xs text-gray-400">ratings</p>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{fmtHrs(user.totalTimeHrs)}</p>
-                    <p className="text-xs text-gray-400">time</p>
+                    <p className="text-sm font-bold text-gray-900">{user.hasTimeData ? `${user.totalHours}h` : "—"}</p>
+                    <p className="text-xs text-gray-400">hours</p>
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900">{user.ratingsPerDay}</p>
@@ -618,25 +731,28 @@ export default function AdminUsagePage() {
       {/* Top performers */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { title: "Top by Ratings", key: "byRatings", metric: "totalRatings", label: "ratings", icon: Award, color: "text-indigo-500" },
-          { title: "Top by Hours", key: "byTime", metric: "totalTimeHrs", label: "hrs", icon: Clock, color: "text-emerald-500" },
-          { title: "Top by Rate", key: "byRate", metric: "ratingsPerDay", label: "/day", icon: TrendingUp, color: "text-amber-500" },
-        ].map(({ title, key, metric, label, icon: Icon, color }) => (
+          { title: "Top by Ratings", key: "byRatings", field: "totalRatings", suffix: " ratings", icon: Award, color: "text-indigo-500" },
+          { title: "Top by Hours", key: "byHours", field: "totalHours", suffix: "h", icon: Clock, color: "text-emerald-500" },
+          { title: "Top by Rate", key: "byRate", field: "ratingsPerDay", suffix: "/day", icon: TrendingUp, color: "text-amber-500" },
+        ].map(({ title, key, field, suffix, icon: Icon, color }) => (
           <div key={key} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <Icon className={`h-4 w-4 ${color}`} />
               <span className="text-xs font-semibold text-gray-700">{title}</span>
             </div>
             <div className="divide-y divide-gray-50">
-              {data.topPerformers[key].map((u: any, i: number) => (
+              {(data.topPerformers[key] || []).map((u: any, i: number) => (
                 <div key={u.userId || i} className="px-4 py-2.5 flex items-center gap-3">
                   <span className="text-xs font-bold text-gray-300 w-4">{i + 1}</span>
                   <span className="text-xs text-gray-700 flex-1 truncate font-medium">{u.name}</span>
                   <span className="text-xs font-bold" style={{ color: USER_PALETTE[i] }}>
-                    {metric === "totalTimeHrs" ? fmtHrs(u[metric]) : `${u[metric]} ${label}`}
+                    {u[field] != null ? `${u[field]}${suffix}` : "—"}
                   </span>
                 </div>
               ))}
+              {!(data.topPerformers[key]?.length) && (
+                <p className="text-xs text-gray-400 text-center py-4">No data</p>
+              )}
             </div>
           </div>
         ))}
