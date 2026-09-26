@@ -95,6 +95,8 @@ export const adminApi = {
     getAllRatings: (params?: object) => api.get("/admin/ratings", { params }),
   getUsage: (params?: object) => api.get("/admin/usage", { params }),
   getUserUsage: (userId: string, params?: object) => api.get(`/admin/usage/${userId}`, { params }),
+  getAnalytics: () => api.get("/admin/analytics"),
+  getUserStats: (userId: string) => api.get(`/admin/users/${userId}/stats`),
 };
 
 export default api;
