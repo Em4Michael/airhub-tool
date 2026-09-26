@@ -1,8 +1,17 @@
 "use client";
 import { useState } from "react";
-import { Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+} from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://airhub-tool-server.onrender.com/api";
 const token = () => localStorage.getItem("airhub_token") || "";
 
 const SYSTEM_PROMPT = `You are a senior conversation transcript annotator with over 30 years of professional linguistic evaluation experience. You have been trained on the evaluation manual and have personally graded 40 real transcript questions with verified answers. Evaluate with absolute precision and zero errors. Triple-check every decision. Never guess. Never skip a step.
@@ -93,7 +102,10 @@ Return ONLY valid JSON:
 async function callAI(system: string, user: string) {
   const res = await fetch(`${API}/tools/annotate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token()}`,
+    },
     body: JSON.stringify({ system_prompt: system, user_message: user }),
   });
   if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -105,46 +117,81 @@ export default function TextAnnotatorPage() {
   const [conv, setConv] = useState("");
   const [opts, setOpts] = useState("");
   const [fam, setFam] = useState("");
-  const [loading, setLoading] = useState<"eval"|"best"|"fam"|null>(null);
+  const [loading, setLoading] = useState<"eval" | "best" | "fam" | null>(null);
   const [evalResult, setEvalResult] = useState<any>(null);
   const [bestResult, setBestResult] = useState<any>(null);
   const [famResult, setFamResult] = useState<any>(null);
   const [error, setError] = useState("");
   const [showEvidence, setShowEvidence] = useState(false);
 
-  const verdict = evalResult?.verdict as "PASS"|"REJECT"|null;
+  const verdict = evalResult?.verdict as "PASS" | "REJECT" | null;
 
   async function doEval() {
     if (!conv.trim()) return;
-    setLoading("eval"); setError(""); setEvalResult(null); setBestResult(null); setFamResult(null);
+    setLoading("eval");
+    setError("");
+    setEvalResult(null);
+    setBestResult(null);
+    setFamResult(null);
     try {
-      setEvalResult(await callAI(SYSTEM_PROMPT, `Evaluate this text message conversation:\n\n${conv}`));
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(null); }
+      setEvalResult(
+        await callAI(
+          SYSTEM_PROMPT,
+          `Evaluate this text message conversation:\n\n${conv}`,
+        ),
+      );
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function doBest() {
     if (!opts.trim()) return;
-    setLoading("best"); setError("");
+    setLoading("best");
+    setError("");
     try {
-      setBestResult(await callAI(RESPONSE_PROMPT, `CONVERSATION:\n${conv}\n\nRESPONSE OPTIONS:\n${opts}`));
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(null); }
+      setBestResult(
+        await callAI(
+          RESPONSE_PROMPT,
+          `CONVERSATION:\n${conv}\n\nRESPONSE OPTIONS:\n${opts}`,
+        ),
+      );
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function doFam() {
     if (!fam.trim()) return;
-    setLoading("fam"); setError("");
+    setLoading("fam");
+    setError("");
     try {
-      setFamResult(await callAI(FAM_PROMPT, `CONVERSATION:\n${conv}\n\nFAMILIARITY QUESTION:\n${fam}`));
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(null); }
+      setFamResult(
+        await callAI(
+          FAM_PROMPT,
+          `CONVERSATION:\n${conv}\n\nFAMILIARITY QUESTION:\n${fam}`,
+        ),
+      );
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(null);
+    }
   }
 
   function reset() {
-    setConv(""); setOpts(""); setFam("");
-    setEvalResult(null); setBestResult(null); setFamResult(null);
-    setError(""); setShowEvidence(false);
+    setConv("");
+    setOpts("");
+    setFam("");
+    setEvalResult(null);
+    setBestResult(null);
+    setFamResult(null);
+    setError("");
+    setShowEvidence(false);
   }
 
   return (
@@ -153,9 +200,15 @@ export default function TextAnnotatorPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Text Annotator</h1>
-          <p className="text-sm text-gray-500 mt-0.5">8-step transcript evaluation · response selection · familiarity questions</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            8-step transcript evaluation · response selection · familiarity
+            questions
+          </p>
         </div>
-        <button onClick={reset} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-all">
+        <button
+          onClick={reset}
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-all"
+        >
           <RotateCcw className="h-3.5 w-3.5" /> Reset
         </button>
       </div>
@@ -163,12 +216,24 @@ export default function TextAnnotatorPage() {
       {/* Progress steps */}
       <div className="flex items-center gap-0">
         {["Evaluate", "Best Response", "Familiarity"].map((label, i) => {
-          const done = (i === 0 && !!evalResult) || (i === 1 && !!bestResult) || (i === 2 && !!famResult);
-          const active = (i === 0 && !evalResult) || (i === 1 && evalResult && !bestResult) || (i === 2 && (bestResult || verdict === "REJECT") && !famResult);
+          const done =
+            (i === 0 && !!evalResult) ||
+            (i === 1 && !!bestResult) ||
+            (i === 2 && !!famResult);
+          const active =
+            (i === 0 && !evalResult) ||
+            (i === 1 && evalResult && !bestResult) ||
+            (i === 2 && (bestResult || verdict === "REJECT") && !famResult);
           return (
             <div key={i} className="flex items-center">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${done ? "bg-green-100 text-green-700" : active ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-400"}`}>
-                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${done ? "bg-green-500 text-white" : active ? "bg-primary text-white" : "bg-gray-300 text-white"}`}>{done ? "✓" : i + 1}</span>
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${done ? "bg-green-100 text-green-700" : active ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-400"}`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${done ? "bg-green-500 text-white" : active ? "bg-primary text-white" : "bg-gray-300 text-white"}`}
+                >
+                  {done ? "✓" : i + 1}
+                </span>
                 {label}
               </div>
               {i < 2 && <div className="w-6 h-px bg-gray-200 mx-1" />}
@@ -177,66 +242,131 @@ export default function TextAnnotatorPage() {
         })}
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm flex items-center gap-2"><XCircle className="h-4 w-4 flex-shrink-0" />{error}</div>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm flex items-center gap-2">
+          <XCircle className="h-4 w-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
 
       {/* Step 1 */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</span>
-          <span className="text-sm font-semibold text-gray-700">Paste Conversation Transcript</span>
+          <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+            1
+          </span>
+          <span className="text-sm font-semibold text-gray-700">
+            Paste Conversation Transcript
+          </span>
         </div>
         <div className="p-5 space-y-4">
-          <textarea value={conv} onChange={e => setConv(e.target.value)} rows={9}
-            placeholder={"Casey: Hey, have you heard?\nRiley: Heard what?\nCasey: Kim and her boyfriend broke up.\nRiley: No way! Why did they split?\nCasey: He said she spent too much time on social media."}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400" />
-          <button onClick={doEval} disabled={!conv.trim() || !!loading}
-            className="btn btn-primary flex items-center gap-2 px-5">
-            {loading === "eval" ? <><Loader2 className="h-4 w-4 animate-spin" />Evaluating all 8 steps…</> : "⚖ Evaluate Conversation"}
+          <textarea
+            value={conv}
+            onChange={(e) => setConv(e.target.value)}
+            rows={9}
+            placeholder={
+              "Casey: Hey, have you heard?\nRiley: Heard what?\nCasey: Kim and her boyfriend broke up.\nRiley: No way! Why did they split?\nCasey: He said she spent too much time on social media."
+            }
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400"
+          />
+          <button
+            onClick={doEval}
+            disabled={!conv.trim() || !!loading}
+            className="btn btn-primary flex items-center gap-2 px-5"
+          >
+            {loading === "eval" ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Evaluating all 8 steps…
+              </>
+            ) : (
+              "⚖ Evaluate Conversation"
+            )}
           </button>
         </div>
       </div>
 
       {/* Step 1 Result */}
       {evalResult && (
-        <div className={`rounded-xl border overflow-hidden ${verdict === "PASS" ? "border-green-200" : "border-red-200"}`}>
-          <div className={`px-5 py-3 flex items-center gap-3 ${verdict === "PASS" ? "bg-green-50" : "bg-red-50"}`}>
-            {verdict === "PASS" ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
-            <span className={`font-bold text-lg ${verdict === "PASS" ? "text-green-700" : "text-red-700"}`}>VERDICT: {verdict}</span>
+        <div
+          className={`rounded-xl border overflow-hidden ${verdict === "PASS" ? "border-green-200" : "border-red-200"}`}
+        >
+          <div
+            className={`px-5 py-3 flex items-center gap-3 ${verdict === "PASS" ? "bg-green-50" : "bg-red-50"}`}
+          >
+            {verdict === "PASS" ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600" />
+            )}
+            <span
+              className={`font-bold text-lg ${verdict === "PASS" ? "text-green-700" : "text-red-700"}`}
+            >
+              VERDICT: {verdict}
+            </span>
           </div>
           <div className="p-5 space-y-4 bg-white">
             {evalResult.summary && (
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">📋 Summary</p>
-                <p className="text-sm text-gray-800 leading-relaxed">{evalResult.summary}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  📋 Summary
+                </p>
+                <p className="text-sm text-gray-800 leading-relaxed">
+                  {evalResult.summary}
+                </p>
               </div>
             )}
             {evalResult.reasons?.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">🔍 Rejection Reasons</p>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">
+                  🔍 Rejection Reasons
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {evalResult.reasons.map((r: string, i: number) => (
-                    <span key={i} className="text-xs bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full font-medium">{r}</span>
+                    <span
+                      key={i}
+                      className="text-xs bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full font-medium"
+                    >
+                      {r}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
-            <button onClick={() => setShowEvidence(!showEvidence)}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              {showEvidence ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <button
+              onClick={() => setShowEvidence(!showEvidence)}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showEvidence ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
               {showEvidence ? "Hide" : "Show"} step-by-step evidence
             </button>
             {showEvidence && evalResult.evidence && (
               <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2.5">
-                {Object.entries(evalResult.evidence).map(([k, v]: [string, any]) => (
-                  <div key={k} className="grid grid-cols-[140px,1fr] gap-2 text-xs">
-                    <span className="font-mono text-gray-500 font-medium">{k.replace(/_/g," ").toUpperCase()}</span>
-                    <span className="text-gray-700">{v}</span>
-                  </div>
-                ))}
+                {Object.entries(evalResult.evidence).map(
+                  ([k, v]: [string, any]) => (
+                    <div
+                      key={k}
+                      className="grid grid-cols-[140px,1fr] gap-2 text-xs"
+                    >
+                      <span className="font-mono text-gray-500 font-medium">
+                        {k.replace(/_/g, " ").toUpperCase()}
+                      </span>
+                      <span className="text-gray-700">{v}</span>
+                    </div>
+                  ),
+                )}
                 {evalResult.audit && (
                   <div className="pt-3 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">Pre-verdict audit</p>
-                    <p className="text-xs text-gray-600 font-mono whitespace-pre-wrap">{evalResult.audit}</p>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">
+                      Pre-verdict audit
+                    </p>
+                    <p className="text-xs text-gray-600 font-mono whitespace-pre-wrap">
+                      {evalResult.audit}
+                    </p>
                   </div>
                 )}
               </div>
@@ -249,27 +379,59 @@ export default function TextAnnotatorPage() {
       {evalResult && verdict === "PASS" && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">2</span>
-            <span className="text-sm font-semibold text-gray-700">Paste Response Options</span>
+            <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+              2
+            </span>
+            <span className="text-sm font-semibold text-gray-700">
+              Paste Response Options
+            </span>
           </div>
           <div className="p-5 space-y-4">
-            <textarea value={opts} onChange={e => setOpts(e.target.value)} rows={5}
-              placeholder={"Option 1: Sounds like things were getting complicated.\nOption 2: That's surprising! Did she say anything to you?\nOption 3: I can't beleive it!\nOption 4: Well, social media can be a lot to handle."}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400" />
-            <button onClick={doBest} disabled={!opts.trim() || !!loading}
-              className="btn btn-primary flex items-center gap-2">
-              {loading === "best" ? <><Loader2 className="h-4 w-4 animate-spin" />Finding best response…</> : "✅ Find Best Response"}
+            <textarea
+              value={opts}
+              onChange={(e) => setOpts(e.target.value)}
+              rows={5}
+              placeholder={
+                "Option 1: Sounds like things were getting complicated.\nOption 2: That's surprising! Did she say anything to you?\nOption 3: I can't beleive it!\nOption 4: Well, social media can be a lot to handle."
+              }
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400"
+            />
+            <button
+              onClick={doBest}
+              disabled={!opts.trim() || !!loading}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {loading === "best" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Finding best response…
+                </>
+              ) : (
+                "✅ Find Best Response"
+              )}
             </button>
             {bestResult && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                <p className="font-bold text-amber-800 text-base">✅ Best Response: {bestResult.bestOption}</p>
-                <p className="text-sm text-amber-700 leading-relaxed">{bestResult.survivor}</p>
-                {bestResult.lastWordCheck && <p className="text-xs text-amber-600 font-mono">{bestResult.lastWordCheck}</p>}
+                <p className="font-bold text-amber-800 text-base">
+                  ✅ Best Response: {bestResult.bestOption}
+                </p>
+                <p className="text-sm text-amber-700 leading-relaxed">
+                  {bestResult.survivor}
+                </p>
+                {bestResult.lastWordCheck && (
+                  <p className="text-xs text-amber-600 font-mono">
+                    {bestResult.lastWordCheck}
+                  </p>
+                )}
                 {bestResult.eliminated?.length > 0 && (
                   <div className="space-y-1 pt-2 border-t border-amber-200">
-                    <p className="text-xs font-semibold text-amber-700">Eliminated:</p>
+                    <p className="text-xs font-semibold text-amber-700">
+                      Eliminated:
+                    </p>
                     {bestResult.eliminated.map((e: any, i: number) => (
-                      <p key={i} className="text-xs text-amber-600">• {e.option} — {e.filter}: {e.reason}</p>
+                      <p key={i} className="text-xs text-amber-600">
+                        • {e.option} — {e.filter}: {e.reason}
+                      </p>
                     ))}
                   </div>
                 )}
@@ -283,25 +445,52 @@ export default function TextAnnotatorPage() {
       {evalResult && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">3</span>
-            <span className="text-sm font-semibold text-gray-700">Familiarity Question <span className="text-gray-400 font-normal">(optional)</span></span>
+            <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+              3
+            </span>
+            <span className="text-sm font-semibold text-gray-700">
+              Familiarity Question{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
+            </span>
           </div>
           <div className="p-5 space-y-4">
-            <textarea value={fam} onChange={e => setFam(e.target.value)} rows={4}
-              placeholder={"Who brought up the topic of the breakup?\nA) Casey\nB) Riley\nC) Both\nD) Neither"}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400" />
-            <button onClick={doFam} disabled={!fam.trim() || !!loading}
-              className="btn btn-primary flex items-center gap-2">
-              {loading === "fam" ? <><Loader2 className="h-4 w-4 animate-spin" />Answering…</> : "🧠 Answer Question"}
+            <textarea
+              value={fam}
+              onChange={(e) => setFam(e.target.value)}
+              rows={4}
+              placeholder={
+                "Who brought up the topic of the breakup?\nA) Casey\nB) Riley\nC) Both\nD) Neither"
+              }
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y bg-gray-50 placeholder:text-gray-400"
+            />
+            <button
+              onClick={doFam}
+              disabled={!fam.trim() || !!loading}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {loading === "fam" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Answering…
+                </>
+              ) : (
+                "🧠 Answer Question"
+              )}
             </button>
             {famResult && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                <p className="font-bold text-blue-800">🧠 Answer: {famResult.answer}</p>
-                <p className="text-sm text-blue-700 leading-relaxed">{famResult.evidence}</p>
+                <p className="font-bold text-blue-800">
+                  🧠 Answer: {famResult.answer}
+                </p>
+                <p className="text-sm text-blue-700 leading-relaxed">
+                  {famResult.evidence}
+                </p>
                 {famResult.eliminated?.length > 0 && (
                   <div className="pt-2 border-t border-blue-100 space-y-1">
                     {famResult.eliminated.map((e: string, i: number) => (
-                      <p key={i} className="text-xs text-blue-500">• {e}</p>
+                      <p key={i} className="text-xs text-blue-500">
+                        • {e}
+                      </p>
                     ))}
                   </div>
                 )}

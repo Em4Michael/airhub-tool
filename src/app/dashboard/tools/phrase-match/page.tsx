@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://airhub-tool-server.onrender.com/api";
 const token = () => localStorage.getItem("airhub_token") || "";
 
 const SYSTEM_PROMPT = `You are a Phrase Match Keyword Evaluator with deep expertise in search advertising. Research both terms thoroughly using web search before rating.
@@ -65,17 +67,55 @@ Return ONLY valid JSON:
   "comment": "<exactly 20-30 words — state relationship type, key deciding factor, specific not generic>"
 }`;
 
-const RAT_STYLE: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  "Good": { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", label: "✓ Good" },
-  "Acceptable": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "~ Acceptable" },
-  "Bad": { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "✗ Bad" },
+const RAT_STYLE: Record<
+  string,
+  { bg: string; text: string; border: string; label: string }
+> = {
+  Good: {
+    bg: "bg-green-50",
+    text: "text-green-700",
+    border: "border-green-200",
+    label: "✓ Good",
+  },
+  Acceptable: {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
+    label: "~ Acceptable",
+  },
+  Bad: {
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+    label: "✗ Bad",
+  },
 };
 
 const EXAMPLES = [
-  { kw: "coffee shop", q: "best coffee shop open now", rating: "Good", note: "enhancement" },
-  { kw: "luxury hotel", q: "5 star hotel", rating: "Acceptable", note: "semantic variant" },
-  { kw: "sushi restaurant", q: "restaurant", rating: "Bad", note: "loses specificity" },
-  { kw: "pizza delivery", q: "pizza recipes", rating: "Bad", note: "different intent" },
+  {
+    kw: "coffee shop",
+    q: "best coffee shop open now",
+    rating: "Good",
+    note: "enhancement",
+  },
+  {
+    kw: "luxury hotel",
+    q: "5 star hotel",
+    rating: "Acceptable",
+    note: "semantic variant",
+  },
+  {
+    kw: "sushi restaurant",
+    q: "restaurant",
+    rating: "Bad",
+    note: "loses specificity",
+  },
+  {
+    kw: "pizza delivery",
+    q: "pizza recipes",
+    rating: "Bad",
+    note: "different intent",
+  },
 ];
 
 export default function PhraseMatchPage() {
@@ -87,11 +127,16 @@ export default function PhraseMatchPage() {
 
   async function handleRate() {
     if (!keyword.trim() || !query.trim()) return;
-    setLoading(true); setError(""); setResult(null);
+    setLoading(true);
+    setError("");
+    setResult(null);
     try {
       const res = await fetch(`${API}/tools/annotate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token()}`,
+        },
         body: JSON.stringify({
           system_prompt: SYSTEM_PROMPT,
           user_message: `KEYWORD: ${keyword}\nQUERY: ${query}\n\nResearch both terms thoroughly, then rate the phrase match relationship.`,
@@ -100,8 +145,11 @@ export default function PhraseMatchPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setResult(JSON.parse(data.text || "{}"));
-    } catch(e: any) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const style = result ? RAT_STYLE[result.rating] : null;
@@ -109,46 +157,91 @@ export default function PhraseMatchPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Phrase Match Evaluator</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Research keyword and query intent · rate Good / Acceptable / Bad</p>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Phrase Match Evaluator
+        </h1>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Research keyword and query intent · rate Good / Acceptable / Bad
+        </p>
       </div>
 
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{error}</div>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-          <span className="text-sm font-semibold text-gray-700">Enter Keyword &amp; Query</span>
+          <span className="text-sm font-semibold text-gray-700">
+            Enter Keyword &amp; Query
+          </span>
         </div>
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">KEYWORD</label>
-              <input type="text" value={keyword} onChange={e=>setKeyword(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                KEYWORD
+              </label>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
                 placeholder="e.g. coffee shop"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">QUERY</label>
-              <input type="text" value={query} onChange={e=>setQuery(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                QUERY
+              </label>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="e.g. best coffee shop near me"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
             </div>
           </div>
 
           {/* Quick examples */}
           <div className="grid grid-cols-2 gap-2">
             {EXAMPLES.map((ex, i) => (
-              <button key={i} onClick={() => { setKeyword(ex.kw); setQuery(ex.q); setResult(null); }}
-                className="flex items-center justify-between text-left border border-gray-100 rounded-lg px-3 py-2 hover:border-gray-300 hover:bg-gray-50 transition-all group">
-                <span className="text-xs text-gray-600 group-hover:text-gray-800 font-mono">{ex.kw} → {ex.q}</span>
-                <span className={`text-xs font-bold ml-2 flex-shrink-0 ${ex.rating === "Good" ? "text-green-600" : ex.rating === "Acceptable" ? "text-amber-600" : "text-red-600"}`}>{ex.rating}</span>
+              <button
+                key={i}
+                onClick={() => {
+                  setKeyword(ex.kw);
+                  setQuery(ex.q);
+                  setResult(null);
+                }}
+                className="flex items-center justify-between text-left border border-gray-100 rounded-lg px-3 py-2 hover:border-gray-300 hover:bg-gray-50 transition-all group"
+              >
+                <span className="text-xs text-gray-600 group-hover:text-gray-800 font-mono">
+                  {ex.kw} → {ex.q}
+                </span>
+                <span
+                  className={`text-xs font-bold ml-2 flex-shrink-0 ${ex.rating === "Good" ? "text-green-600" : ex.rating === "Acceptable" ? "text-amber-600" : "text-red-600"}`}
+                >
+                  {ex.rating}
+                </span>
               </button>
             ))}
           </div>
 
-          <button onClick={handleRate} disabled={!keyword.trim() || !query.trim() || loading}
-            className="btn btn-primary flex items-center gap-2 w-full justify-center">
-            {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Researching & rating…</> : "🔍 Rate Phrase Match"}
+          <button
+            onClick={handleRate}
+            disabled={!keyword.trim() || !query.trim() || loading}
+            className="btn btn-primary flex items-center gap-2 w-full justify-center"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Researching & rating…
+              </>
+            ) : (
+              "🔍 Rate Phrase Match"
+            )}
           </button>
         </div>
       </div>
@@ -156,38 +249,62 @@ export default function PhraseMatchPage() {
       {/* Result */}
       {result && style && (
         <div className={`border ${style.border} rounded-xl overflow-hidden`}>
-          <div className={`${style.bg} px-5 py-4 flex items-center justify-between`}>
+          <div
+            className={`${style.bg} px-5 py-4 flex items-center justify-between`}
+          >
             <div>
-              <p className="text-xs text-gray-500 font-mono">{keyword} → {query}</p>
-              {result.relationship_type && <p className="text-xs text-gray-500 mt-0.5">Type: <strong>{result.relationship_type}</strong></p>}
+              <p className="text-xs text-gray-500 font-mono">
+                {keyword} → {query}
+              </p>
+              {result.relationship_type && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Type: <strong>{result.relationship_type}</strong>
+                </p>
+              )}
             </div>
-            <span className={`text-2xl font-black ${style.text}`}>{style.label}</span>
+            <span className={`text-2xl font-black ${style.text}`}>
+              {style.label}
+            </span>
           </div>
           <div className="bg-white p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {result.keyword_research && (
                 <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-gray-500 mb-1">Keyword research</p>
-                  <p className="text-xs text-gray-700 leading-relaxed">{result.keyword_research}</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-1">
+                    Keyword research
+                  </p>
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    {result.keyword_research}
+                  </p>
                 </div>
               )}
               {result.query_research && (
                 <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-gray-500 mb-1">Query research</p>
-                  <p className="text-xs text-gray-700 leading-relaxed">{result.query_research}</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-1">
+                    Query research
+                  </p>
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    {result.query_research}
+                  </p>
                 </div>
               )}
             </div>
             {result.key_deciding_factor && (
               <div className={`border-l-4 ${style.border} pl-3`}>
                 <p className="text-xs text-gray-500">Key deciding factor</p>
-                <p className="text-sm text-gray-800 mt-0.5 leading-relaxed">{result.key_deciding_factor}</p>
+                <p className="text-sm text-gray-800 mt-0.5 leading-relaxed">
+                  {result.key_deciding_factor}
+                </p>
               </div>
             )}
             {result.comment && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="text-xs font-semibold text-primary/70 mb-1">📝 Comment for submission (20–30 words)</p>
-                <p className="text-sm text-gray-800 font-medium leading-relaxed">{result.comment}</p>
+                <p className="text-xs font-semibold text-primary/70 mb-1">
+                  📝 Comment for submission (20–30 words)
+                </p>
+                <p className="text-sm text-gray-800 font-medium leading-relaxed">
+                  {result.comment}
+                </p>
               </div>
             )}
           </div>

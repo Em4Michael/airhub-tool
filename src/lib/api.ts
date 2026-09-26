@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://airhub-tool-server.onrender.com/api",
   headers: { "Content-Type": "application/json" },
   timeout: 120000, // 2 min for AI calls
 });
@@ -24,7 +26,7 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 // Auth
@@ -42,16 +44,39 @@ export const ratingsApi = {
     api.post("/ratings/evaluate/page-quality", { url }),
   evaluateNeedsMet: (query: string, url: string) =>
     api.post("/ratings/evaluate/needs-met", { query, url }),
-  generateSxSComment: (data: object) =>
-    api.post("/ratings/sxs-summary", data),
-    evaluateNeedsMetImage: (query: string, url: string, imageBase64: string, imageType: string) =>
-    api.post("/ratings/evaluate/needs-met-image", { query, url, imageBase64, imageType }),
+  generateSxSComment: (data: object) => api.post("/ratings/sxs-summary", data),
+  evaluateNeedsMetImage: (
+    query: string,
+    url: string,
+    imageBase64: string,
+    imageType: string,
+  ) =>
+    api.post("/ratings/evaluate/needs-met-image", {
+      query,
+      url,
+      imageBase64,
+      imageType,
+    }),
   evaluateYoutube: (query: string, url: string) =>
     api.post("/ratings/evaluate/youtube", { query, url }),
   evaluateImage: (query: string, url: string) =>
     api.post("/ratings/evaluate/image", { query, url }),
-  evaluateImageFull: (query: string, url: string, queryImageBase64: string, queryImageMimeType: string, resultImageBase64: string, resultImageMimeType: string) =>
-    api.post("/ratings/evaluate/image-full", { query, url, queryImageBase64, queryImageMimeType, resultImageBase64, resultImageMimeType }),
+  evaluateImageFull: (
+    query: string,
+    url: string,
+    queryImageBase64: string,
+    queryImageMimeType: string,
+    resultImageBase64: string,
+    resultImageMimeType: string,
+  ) =>
+    api.post("/ratings/evaluate/image-full", {
+      query,
+      url,
+      queryImageBase64,
+      queryImageMimeType,
+      resultImageBase64,
+      resultImageMimeType,
+    }),
   evaluateSxS: (query: string, url: string, urlB: string) =>
     api.post("/ratings/evaluate/sxs", { query, url, urlB }),
   getMyRatings: (page = 1, taskType?: string) =>
